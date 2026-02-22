@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Users</h2>
+
+<ul>
+    {% for user in users %}
+    <li>
+        <a href="{% url 'chat_room' user.id %}">
+            {{ user.username }}
+            <span id="status-{{ user.id }}">
+                {% if user.is_online %} 🟢 {% else %} ⚫ {% endif %}
+            </span>
+
+            (<span id="unread-{{ user.id }}">{{ user.unread_count }}</span>)
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+<script>
+    const socket = new WebSocket(
+        (window.location.protocol === "https:" ? "wss://" : "ws://")
+        + window.location.host
+        + "/ws/notifications/"
+    );
+
+    socket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        // 🔔 UNREAD UPDATE
+        if (data.type === "unread_update") {
+
+            // This updates TOTAL unread badge for logged-in user
+            // If you want per-user unread, backend must send sender_id again
+
+            if (data.type === "unread_update") {
+                const badge = document.getElementById("unread-" + data.sender_id);
+                if (badge) {
+                    badge.innerText = data.count;
+                }
+            }
+        }
+
+        // 🟢 ONLINE STATUS UPDATE
+        if (data.type === "status_update") {
+            const status = document.getElementById("status-" + data.user_id);
+            if (status) {
+                status.innerHTML = data.is_online ? "🟢" : "⚫";
+            }
+        }
+    };
+</script>
+{% endblock %}
